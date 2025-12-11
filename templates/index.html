@@ -793,7 +793,15 @@
 
         function formatRelativeDate(dateStr) {
             if (!dateStr) return '';
-            const date = new Date(dateStr);
+            // Handle date-only strings (YYYY-MM-DD) as local time, not UTC
+            let date;
+            if (dateStr.length === 10 && dateStr.includes('-')) {
+                // Date only - parse as local midnight
+                const [y, m, d] = dateStr.split('-');
+                date = new Date(y, m - 1, d);
+            } else {
+                date = new Date(dateStr);
+            }
             const now = new Date();
             const diff = Math.floor((now - date) / 1000);
 
