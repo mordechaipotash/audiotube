@@ -795,36 +795,33 @@
             if (!dateStr) return '';
             const now = new Date();
             let date;
-            let isDateOnly = false;
 
-            // Handle date-only strings (YYYY-MM-DD)
-            if (dateStr.length === 10 && dateStr.includes('-')) {
-                isDateOnly = true;
+            // Check if it's a date-only string (YYYY-MM-DD, exactly 10 chars)
+            const isDateOnly = dateStr.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
+
+            if (isDateOnly) {
+                // Parse as local date for date-only strings
                 const [y, m, d] = dateStr.split('-');
                 date = new Date(y, m - 1, d);
 
-                // For date-only, check if it's today/yesterday by comparing dates
+                // Compare dates only
                 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
 
                 if (date.getTime() === today.getTime()) return 'today';
                 if (date.getTime() === yesterday.getTime()) return 'yesterday';
-            } else {
-                date = new Date(dateStr);
-            }
 
-            const diff = Math.floor((now - date) / 1000);
-
-            // For date-only strings, use day-based comparisons
-            if (isDateOnly) {
-                const days = Math.floor(diff / 86400);
+                const days = Math.floor((today - date) / 86400000);
                 if (days < 7) return `${days}d ago`;
                 if (days < 30) return `${Math.floor(days/7)}w ago`;
                 if (days < 365) return `${Math.floor(days/30)}mo ago`;
                 return `${Math.floor(days/365)}y ago`;
             }
 
-            // For full timestamps (like history), use precise time
+            // Full ISO timestamp - parse directly
+            date = new Date(dateStr);
+            const diff = Math.floor((now - date) / 1000);
+
             if (diff < 60) return 'just now';
             if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
             if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;

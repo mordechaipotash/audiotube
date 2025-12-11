@@ -207,14 +207,16 @@ def get_metadata(video_id):
         if result.returncode == 0:
             data = json.loads(result.stdout)
 
+            # Try to get precise timestamp first, fall back to date
+            upload_timestamp = data.get('timestamp') or data.get('release_timestamp') or 0
             upload_date = data.get('upload_date', '')
-            upload_timestamp = 0
-            if upload_date and len(upload_date) == 8:
-                try:
-                    dt = datetime.strptime(upload_date, '%Y%m%d')
-                    upload_timestamp = int(dt.timestamp())
-                except:
-                    pass
+
+            if upload_timestamp:
+                # We have precise time - return ISO format
+                dt = datetime.utcfromtimestamp(upload_timestamp)
+                upload_date = dt.isoformat() + 'Z'
+            elif upload_date and len(upload_date) == 8:
+                # Only have date - format as YYYY-MM-DD
                 upload_date = f"{upload_date[:4]}-{upload_date[4:6]}-{upload_date[6:8]}"
 
             views = data.get('view_count', 0) or 0
