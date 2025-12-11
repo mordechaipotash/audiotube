@@ -793,18 +793,38 @@
 
         function formatRelativeDate(dateStr) {
             if (!dateStr) return '';
-            // Handle date-only strings (YYYY-MM-DD) as local time, not UTC
+            const now = new Date();
             let date;
+            let isDateOnly = false;
+
+            // Handle date-only strings (YYYY-MM-DD)
             if (dateStr.length === 10 && dateStr.includes('-')) {
-                // Date only - parse as local midnight
+                isDateOnly = true;
                 const [y, m, d] = dateStr.split('-');
                 date = new Date(y, m - 1, d);
+
+                // For date-only, check if it's today/yesterday by comparing dates
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+
+                if (date.getTime() === today.getTime()) return 'today';
+                if (date.getTime() === yesterday.getTime()) return 'yesterday';
             } else {
                 date = new Date(dateStr);
             }
-            const now = new Date();
+
             const diff = Math.floor((now - date) / 1000);
 
+            // For date-only strings, use day-based comparisons
+            if (isDateOnly) {
+                const days = Math.floor(diff / 86400);
+                if (days < 7) return `${days}d ago`;
+                if (days < 30) return `${Math.floor(days/7)}w ago`;
+                if (days < 365) return `${Math.floor(days/30)}mo ago`;
+                return `${Math.floor(days/365)}y ago`;
+            }
+
+            // For full timestamps (like history), use precise time
             if (diff < 60) return 'just now';
             if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
             if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
