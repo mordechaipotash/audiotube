@@ -3,6 +3,7 @@ import subprocess
 import json
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, make_response
+from flask_cors import CORS
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -21,6 +22,20 @@ from auth import (
 )
 
 app = Flask(__name__)
+
+# Enable CORS for API routes
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "http://localhost:3000",
+            "https://*.vercel.app",
+            "https://jewtube.vercel.app",
+            "https://jewtube.mordechaipotash.com"
+        ],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Initialize database on startup
 if os.environ.get('DATABASE_URL'):
