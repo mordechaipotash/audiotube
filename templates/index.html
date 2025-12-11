@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AudioTube</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        bg: 'var(--bg)',
+                        card: 'var(--card)',
+                        border: 'var(--border)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --card: #141414;
+            --border: #262626;
+            --text: #ffffff;
+            --text-muted: #a3a3a3;
+            --thumb-bg: #262626;
+        }
+        .light {
+            --bg: #ffffff;
+            --card: #f5f5f5;
+            --border: #e5e5e5;
+            --text: #0a0a0a;
+            --text-muted: #525252;
+            --thumb-bg: #e5e5e5;
+        }
+        input[type="range"] { -webkit-appearance: none; background: transparent; }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 12px; width: 12px;
+            border-radius: 50%; background: var(--text); cursor: pointer; margin-top: -4px;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; background: var(--thumb-bg); border-radius: 2px;
+        }
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .loading-pulse { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-bg min-h-screen transition-colors" style="color: var(--text)">
+    <!-- Header -->
+    <header class="sticky top-0 bg-bg/95 backdrop-blur border-b border-border p-4 z-50">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex gap-3 items-center">
+                <h1 class="text-xl font-bold cursor-pointer" style="color: var(--text-muted)" onclick="showTab('search')">AudioTube</h1>
+                <input type="text" id="search" placeholder="Search YouTube audio..."
+                    class="flex-1 bg-card border border-border rounded-lg px-4 py-2
+                           focus:outline-none focus:border-neutral-500 transition"
+                    style="color: var(--text)">
+                <button onclick="doSearch()"
+                    class="bg-neutral-800 text-white px-6 py-2 rounded-lg font-medium hover:bg-neutral-700 transition">
+                    Search
+                </button>
+                <!-- Theme toggle -->
+                <button onclick="toggleTheme()" id="themeBtn"
+                    class="w-10 h-10 rounded-lg bg-card border border-border flex items-center justify-center hover:opacity-80 transition" title="Toggle theme">
+                    <svg id="sunIcon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/>
+                    </svg>
+                    <svg id="moonIcon" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                    </svg>
+                </button>
+                <!-- Auth button -->
+                <div id="authBtn"></div>
+            </div>
+            <!-- Tabs + Filters -->
+            <div class="flex gap-2 mt-3 flex-wrap items-center">
+                <button onclick="showTab('search')" data-tab="search"
+                    class="tab-btn px-3 py-1 text-xs rounded-full bg-white text-black transition">
+                    Search
+                </button>
+                <button onclick="showTab('history')" data-tab="history"
+                    class="tab-btn px-3 py-1 text-xs rounded-full bg-neutral-800 hover:bg-neutral-700 transition">
+                    History
+                </button>
+                <span class="text-neutral-600 mx-2">|</span>
+                <!-- Date Filters (search only) -->
+                <div id="dateFilters" class="flex gap-2 flex-wrap">
+                    <button onclick="setDateFilter('')" data-filter=""
+                        class="date-btn px-3 py-1 text-xs rounded-full bg-blue-600 text-white transition">
+                        Any time
+                    </button>
+                    <button onclick="setDateFilter('today')" data-filter="today"
+                        class="date-btn px-3 py-1 text-xs rounded-full bg-neutral-800 hover:bg-neutral-700 transition">
+                        Today
+                    </button>
+                    <button onclick="setDateFilter('week')" data-filter="week"
+                        class="date-btn px-3 py-1 text-xs rounded-full bg-neutral-800 hover:bg-neutral-700 transition">
+                        This week
+                    </button>
+                    <button onclick="setDateFilter('month')" data-filter="month"
+                        class="date-btn px-3 py-1 text-xs rounded-full bg-neutral-800 hover:bg-neutral-700 transition">
+                        This month
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto p-4 pb-32">
+        <div id="loading" class="hidden text-center py-12" style="color: var(--text-muted)">
+            Searching...
+        </div>
+        <div id="results" class="grid grid-cols-3 gap-4"></div>
+        <!-- Pagination -->
+        <div id="pagination" class="hidden flex justify-center gap-4 mt-6 mb-4">
+            <button onclick="prevPage()" id="prevBtn"
+                class="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed">
+                Previous
+            </button>
+            <span id="pageInfo" class="py-2" style="color: var(--text-muted)"></span>
+            <button onclick="nextPage()" id="nextBtn"
+                class="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed">
+                Next
+            </button>
+        </div>
+        <div id="empty" class="text-center py-12" style="color: var(--text-muted)">
+            Search for music to get started
+        </div>
+        <!-- History View -->
+        <div id="historyView" class="hidden">
+            <div id="historyContent"></div>
+        </div>
+    </main>
+
+    <!-- Player -->
+    <footer id="player" class="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 hidden">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-4">
+                <div class="flex-1 min-w-0">
+                    <div id="nowPlaying" class="font-medium truncate">Nothing playing</div>
+                    <div id="nowChannel" class="text-sm truncate" style="color: var(--text-muted)"></div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="togglePlay()" id="playBtn"
+                        class="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition">
+                        <svg id="playIcon" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <svg id="pauseIcon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex items-center gap-2 flex-1">
+                    <span id="currentTime" class="text-xs w-10" style="color: var(--text-muted)">0:00</span>
+                    <input type="range" id="progress" min="0" max="100" value="0"
+                        class="flex-1" onchange="seekTo(this.value)">
+                    <span id="duration" class="text-xs w-10" style="color: var(--text-muted)">0:00</span>
+                </div>
+                <button onclick="cycleSpeed()" id="speedBtn"
+                    class="px-2 py-1 text-xs font-mono bg-neutral-800 hover:bg-neutral-700 rounded transition min-w-[3rem]">
+                    1x
+                </button>
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4" style="color: var(--text-muted)" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+                    </svg>
+                    <input type="range" id="volume" min="0" max="100" value="80"
+                        class="w-20" onchange="setVolume(this.value)">
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-card border border-border rounded-xl p-6 w-full max-w-sm mx-4">
+            <h2 class="text-xl font-bold mb-4">Login to AudioTube</h2>
+            <p class="text-sm mb-4" style="color: var(--text-muted)">Enter your email to receive a magic login link.</p>
+            <input type="email" id="loginEmail" placeholder="your@email.com"
+                class="w-full bg-bg border border-border rounded-lg px-4 py-2 mb-4 focus:outline-none focus:border-neutral-500"
+                style="color: var(--text)">
+            <div id="loginError" class="text-red-500 text-sm mb-4 hidden"></div>
+            <div id="loginSuccess" class="text-green-500 text-sm mb-4 hidden"></div>
+            <div class="flex gap-3">
+                <button onclick="closeLoginModal()"
+                    class="flex-1 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition">
+                    Cancel
+                </button>
+                <button onclick="sendMagicLink()" id="sendLinkBtn"
+                    class="flex-1 px-4 py-2 bg-white text-black rounded-lg font-medium hover:bg-neutral-200 transition">
+                    Send Link
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="audio"></audio>
+
+    <script>
+        const audio = document.getElementById('audio');
+        const searchInput = document.getElementById('search');
+        let currentUser = null;
+        let currentVideo = null;
+        let currentDateFilter = '';
+        let currentTab = 'search';
+        let allVideos = [];
+        let currentPage = 0;
+        const perPage = 6;
+        const speeds = [1, 1.25, 1.5, 1.75, 2];
+        let speedIndex = 0;
+        let isDark = localStorage.getItem('theme') !== 'light';
+
+        // Initialize
+        initTheme();
+        checkAuth();
+        checkUrlParams();
+
+        function initTheme() {
+            if (!isDark) {
+                document.body.classList.add('light');
+                document.getElementById('sunIcon').classList.remove('hidden');
+                document.getElementById('moonIcon').classList.add('hidden');
+            }
+        }
+
+        function toggleTheme() {
+            isDark = !isDark;
+            document.body.classList.toggle('light', !isDark);
+            document.getElementById('sunIcon').classList.toggle('hidden', isDark);
+            document.getElementById('moonIcon').classList.toggle('hidden', !isDark);
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        function checkUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('error') === 'expired_link') {
+                alert('Login link expired. Please try again.');
+            }
+            if (params.get('logged_in') === 'true') {
+                // Clean URL
+                window.history.replaceState({}, '', '/');
+            }
+        }
+
+        // ============== Auth ==============
+
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/auth/me');
+                const data = await res.json();
+                currentUser = data.logged_in ? data : null;
+                updateAuthUI();
+            } catch (e) {
+                currentUser = null;
+                updateAuthUI();
+            }
+        }
+
+        function updateAuthUI() {
+            const authBtn = document.getElementById('authBtn');
+            if (currentUser) {
+                authBtn.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs hidden sm:inline" style="color: var(--text-muted)">${currentUser.email}</span>
+                        <button onclick="logout()" class="px-3 py-2 text-xs bg-neutral-800 hover:bg-neutral-700 rounded-lg transition">
+                            Logout
+                        </button>
+                    </div>
+                `;
+            } else {
+                authBtn.innerHTML = `
+                    <button onclick="showLoginModal()" class="px-4 py-2 text-sm bg-white text-black rounded-lg font-medium hover:bg-neutral-200 transition">
+                        Login
+                    </button>
+                `;
+            }
+        }
+
+        function showLoginModal() {
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('loginEmail').focus();
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('loginSuccess').classList.add('hidden');
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('loginEmail').value = '';
+        }
+
+        async function sendMagicLink() {
+            const email = document.getElementById('loginEmail').value.trim();
+            if (!email || !email.includes('@')) {
+                document.getElementById('loginError').textContent = 'Please enter a valid email';
+                document.getElementById('loginError').classList.remove('hidden');
+                return;
+            }
+
+            const btn = document.getElementById('sendLinkBtn');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+                const res = await fetch('/api/auth/request', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email})
+                });
+                const data = await res.json();
+
+                if (data.ok) {
+                    document.getElementById('loginError').classList.add('hidden');
+                    document.getElementById('loginSuccess').textContent = 'Check your email for the login link!';
+                    document.getElementById('loginSuccess').classList.remove('hidden');
+                    btn.textContent = 'Sent!';
+                } else {
+                    document.getElementById('loginError').textContent = data.error || 'Failed to send';
+                    document.getElementById('loginError').classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.textContent = 'Send Link';
+                }
+            } catch (e) {
+                document.getElementById('loginError').textContent = 'Network error';
+                document.getElementById('loginError').classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = 'Send Link';
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', {method: 'POST'});
+            currentUser = null;
+            updateAuthUI();
+        }
+
+        document.getElementById('loginEmail').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMagicLink();
+        });
+
+        // ============== Tabs ==============
+
+        function showTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.dataset.tab === tab) {
+                    btn.classList.remove('bg-neutral-800', 'hover:bg-neutral-700');
+                    btn.classList.add('bg-white', 'text-black');
+                } else {
+                    btn.classList.remove('bg-white', 'text-black');
+                    btn.classList.add('bg-neutral-800', 'hover:bg-neutral-700');
+                }
+            });
+
+            if (tab === 'search') {
+                document.getElementById('results').classList.remove('hidden');
+                document.getElementById('empty').classList.remove('hidden');
+                document.getElementById('pagination').classList.remove('hidden');
+                document.getElementById('historyView').classList.add('hidden');
+                document.getElementById('dateFilters').classList.remove('hidden');
+            } else if (tab === 'history') {
+                document.getElementById('results').classList.add('hidden');
+                document.getElementById('empty').classList.add('hidden');
+                document.getElementById('pagination').classList.add('hidden');
+                document.getElementById('historyView').classList.remove('hidden');
+                document.getElementById('dateFilters').classList.add('hidden');
+                loadHistory();
+            }
+        }
+
+        async function loadHistory() {
+            const container = document.getElementById('historyContent');
+
+            if (!currentUser) {
+                container.innerHTML = `
+                    <div class="text-center py-12" style="color: var(--text-muted)">
+                        <p class="mb-4">Login to see your listening history</p>
+                        <button onclick="showLoginModal()" class="px-4 py-2 bg-white text-black rounded-lg font-medium">
+                            Login
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '<div class="text-center py-12" style="color: var(--text-muted)">Loading history...</div>';
+
+            try {
+                const res = await fetch('/api/history');
+                if (!res.ok) throw new Error('Not logged in');
+                const history = await res.json();
+
+                if (history.length === 0) {
+                    container.innerHTML = '<div class="text-center py-12" style="color: var(--text-muted)">No listening history yet</div>';
+                    return;
+                }
+
+                container.innerHTML = history.map(h => `
+                    <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-card transition cursor-pointer border border-transparent hover:border-border"
+                         onclick="playVideo('${h.video_id}', '${escapeHtml(h.title)}', '${escapeHtml(h.channel)}', ${h.duration || 0})">
+                        <div class="w-12 h-12 bg-neutral-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium truncate">${escapeHtml(h.title)}</div>
+                            <div class="text-sm truncate" style="color: var(--text-muted)">${escapeHtml(h.channel)}</div>
+                        </div>
+                        <div class="text-xs" style="color: var(--text-muted)">${formatRelativeDate(h.viewed_at)}</div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = '<div class="text-center py-12 text-red-500">Failed to load history</div>';
+            }
+        }
+
+        // ============== Search ==============
+
+        function setDateFilter(filter) {
+            currentDateFilter = filter;
+            document.querySelectorAll('.date-btn').forEach(btn => {
+                if (btn.dataset.filter === filter) {
+                    btn.classList.remove('bg-neutral-800', 'hover:bg-neutral-700');
+                    btn.classList.add('bg-blue-600', 'text-white');
+                } else {
+                    btn.classList.remove('bg-blue-600', 'text-white');
+                    btn.classList.add('bg-neutral-800', 'hover:bg-neutral-700');
+                }
+            });
+            if (searchInput.value.trim()) {
+                doSearch();
+            }
+        }
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') doSearch();
+        });
+
+        async function doSearch() {
+            const query = searchInput.value.trim();
+            if (!query) return;
+
+            showTab('search');
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('empty').classList.add('hidden');
+            document.getElementById('pagination').classList.add('hidden');
+            allVideos = [];
+            currentPage = 0;
+
+            try {
+                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&date=${currentDateFilter}`);
+                const videos = await res.json();
+
+                document.getElementById('loading').classList.add('hidden');
+
+                if (videos.error) {
+                    document.getElementById('empty').textContent = videos.error;
+                    document.getElementById('empty').classList.remove('hidden');
+                    return;
+                }
+
+                if (videos.length === 0) {
+                    document.getElementById('empty').textContent = 'No results found';
+                    document.getElementById('empty').classList.remove('hidden');
+                    return;
+                }
+
+                allVideos = videos;
+                renderPage(videos);
+                fetchMetadataProgressively();
+
+            } catch (err) {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('empty').textContent = 'Search failed';
+                document.getElementById('empty').classList.remove('hidden');
+            }
+        }
+
+        async function fetchMetadataProgressively() {
+            const concurrency = 3;
+            for (let i = 0; i < allVideos.length; i += concurrency) {
+                const batch = allVideos.slice(i, i + concurrency);
+                await Promise.all(batch.map(async (video) => {
+                    try {
+                        const res = await fetch(`/api/metadata/${video.id}`);
+                        const meta = await res.json();
+                        if (!meta.error) {
+                            const idx = allVideos.findIndex(v => v.id === video.id);
+                            if (idx !== -1) {
+                                allVideos[idx] = { ...allVideos[idx], ...meta };
+                                updateVideoCard(video.id, meta);
+                            }
+                        }
+                    } catch (e) {}
+                }));
+            }
+        }
+
+        function updateVideoCard(videoId, meta) {
+            const card = document.querySelector(`[data-video-id="${videoId}"]`);
+            if (!card) return;
+            const metaEl = card.querySelector('.video-meta');
+            if (metaEl) {
+                let html = `<div class="font-medium truncate cursor-pointer hover:text-blue-500 transition" onclick="event.stopPropagation(); searchChannel('${escapeHtml(card.dataset.channel)}')">${escapeHtml(card.dataset.channel)}</div>`;
+                html += `<div class="flex items-center gap-1 mt-1">`;
+                html += meta.views ? `<span>${meta.views}</span>` : '';
+                html += meta.upload_date ? `<span>•</span><span>${formatRelativeDate(meta.upload_date)}</span>` : '';
+                html += `</div>`;
+                metaEl.innerHTML = html;
+            }
+        }
+
+        function renderPage(videos) {
+            const start = currentPage * perPage;
+            const end = start + perPage;
+            const pageVideos = videos.slice(start, end);
+            const totalPages = Math.ceil(videos.length / perPage);
+
+            const html = pageVideos.map(v => `
+                <div class="p-3 rounded-xl hover:bg-card transition group border border-transparent hover:border-border"
+                     data-video-id="${v.id}" data-channel="${escapeHtml(v.channel)}">
+                    <!-- Thumbnail with single play button -->
+                    <div class="relative cursor-pointer" onclick="playVideo('${v.id}', '${escapeHtml(v.title)}', '${escapeHtml(v.channel)}', ${v.duration_raw || 0})">
+                        <div class="w-full aspect-video bg-neutral-900 rounded-lg flex items-center justify-center">
+                            <button class="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center hover:scale-110 transition shadow-lg">
+                                <svg class="w-8 h-8 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <span class="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded font-mono">
+                            ${formatDuration(v.duration)}
+                        </span>
+                    </div>
+                    <!-- Video details -->
+                    <div class="mt-3">
+                        <h3 class="font-medium text-sm leading-snug line-clamp-2 cursor-pointer hover:text-blue-500 transition"
+                            onclick="playVideo('${v.id}', '${escapeHtml(v.title)}', '${escapeHtml(v.channel)}', ${v.duration_raw || 0})">
+                            ${escapeHtml(v.title)}
+                        </h3>
+                        <div class="video-meta mt-2 text-xs" style="color: var(--text-muted)">
+                            <div class="font-medium truncate cursor-pointer hover:text-blue-500 transition" onclick="event.stopPropagation(); searchChannel('${escapeHtml(v.channel)}')">${escapeHtml(v.channel)}</div>
+                            <div class="flex items-center gap-1 mt-1">
+                                ${v.views ? `<span>${v.views}</span>` : '<span class="loading-pulse">loading...</span>'}
+                                ${v.upload_date ? `<span>•</span><span>${formatRelativeDate(v.upload_date)}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('results').innerHTML = html;
+
+            if (videos.length > perPage) {
+                document.getElementById('pagination').classList.remove('hidden');
+                document.getElementById('pageInfo').textContent = `Page ${currentPage + 1} of ${totalPages}`;
+                document.getElementById('prevBtn').disabled = currentPage === 0;
+                document.getElementById('nextBtn').disabled = currentPage >= totalPages - 1;
+            } else {
+                document.getElementById('pagination').classList.add('hidden');
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(allVideos.length / perPage);
+            if (currentPage < totalPages - 1) {
+                currentPage++;
+                renderPage(allVideos);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                renderPage(allVideos);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function searchChannel(channelName) {
+            searchInput.value = channelName;
+            doSearch();
+        }
+
+        // ============== Player ==============
+
+        async function playVideo(id, title, channel, duration) {
+            document.getElementById('player').classList.remove('hidden');
+            document.getElementById('nowPlaying').textContent = title;
+            document.getElementById('nowChannel').textContent = channel;
+            currentVideo = { id, title, channel, duration };
+
+            try {
+                const res = await fetch(`/api/stream/${id}`);
+                const data = await res.json();
+
+                if (data.url) {
+                    audio.src = data.url;
+                    audio.play();
+                    updatePlayButton(true);
+
+                    // Track in history if logged in
+                    if (currentUser) {
+                        fetch('/api/history', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({video_id: id, title, channel, duration})
+                        }).catch(() => {});
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load audio:', err);
+            }
+        }
+
+        function togglePlay() {
+            if (audio.paused) {
+                audio.play();
+                updatePlayButton(true);
+            } else {
+                audio.pause();
+                updatePlayButton(false);
+            }
+        }
+
+        function updatePlayButton(playing) {
+            document.getElementById('playIcon').classList.toggle('hidden', playing);
+            document.getElementById('pauseIcon').classList.toggle('hidden', !playing);
+        }
+
+        function seekTo(val) {
+            if (audio.duration) {
+                audio.currentTime = (val / 100) * audio.duration;
+            }
+        }
+
+        function setVolume(val) {
+            audio.volume = val / 100;
+        }
+
+        function cycleSpeed() {
+            speedIndex = (speedIndex + 1) % speeds.length;
+            audio.playbackRate = speeds[speedIndex];
+            document.getElementById('speedBtn').textContent = speeds[speedIndex] + 'x';
+        }
+
+        audio.addEventListener('timeupdate', () => {
+            if (audio.duration) {
+                document.getElementById('progress').value = (audio.currentTime / audio.duration) * 100;
+                document.getElementById('currentTime').textContent = formatDuration(audio.currentTime);
+            }
+        });
+
+        audio.addEventListener('loadedmetadata', () => {
+            document.getElementById('duration').textContent = formatDuration(audio.duration);
+        });
+
+        audio.addEventListener('ended', () => updatePlayButton(false));
+        audio.addEventListener('pause', () => updatePlayButton(false));
+        audio.addEventListener('play', () => updatePlayButton(true));
+
+        audio.volume = 0.8;
+
+        // ============== Utilities ==============
+
+        function formatDuration(s) {
+            if (!s) return '--:--';
+            const m = Math.floor(s / 60);
+            const sec = Math.floor(s % 60);
+            return `${m}:${sec.toString().padStart(2, '0')}`;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        function formatRelativeDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000);
+
+            if (diff < 60) return 'just now';
+            if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+            if (diff < 604800) return `${Math.floor(diff/86400)}d ago`;
+            if (diff < 2592000) return `${Math.floor(diff/604800)}w ago`;
+            if (diff < 31536000) return `${Math.floor(diff/2592000)}mo ago`;
+            return `${Math.floor(diff/31536000)}y ago`;
+        }
+    </script>
+</body>
+</html>
