@@ -189,3 +189,11 @@ def cleanup_old_cache(max_age_hours=6):
             DELETE FROM stream_cache
             WHERE cached_at < NOW() - INTERVAL '%s hours'
         """, (max_age_hours,))
+
+def get_user_count():
+    """Get total number of registered users"""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) as count FROM users")
+        row = cur.fetchone()
+        return row['count'] if row else 0

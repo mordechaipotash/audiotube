@@ -115,6 +115,17 @@
         </div>
     </header>
 
+    <!-- User Stats Banner -->
+    <div id="statsBanner" class="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 text-center text-sm">
+        <span id="statsText" class="loading-pulse">Loading...</span>
+        <button onclick="shareApp()" class="ml-3 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-xs font-medium transition inline-flex items-center gap-1">
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.35 2.92 3 2.92s3-1.31 3-2.92-1.35-2.92-3-2.92z"/>
+            </svg>
+            Share
+        </button>
+    </div>
+
     <!-- Main Content -->
     <main class="max-w-4xl mx-auto p-4 pb-32">
         <div id="loading" class="hidden text-center py-12" style="color: var(--text-muted)">
@@ -225,6 +236,51 @@
         initTheme();
         checkAuth();
         checkUrlParams();
+        loadStats();
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const stats = await res.json();
+                const text = document.getElementById('statsText');
+
+                if (stats.free_slots > 0) {
+                    text.innerHTML = `<strong>${stats.user_count}</strong> users joined • <strong>${stats.free_slots}</strong> free spots left • After 20: $1/month`;
+                } else {
+                    text.innerHTML = `<strong>${stats.user_count}</strong> users joined • First 20 free • 21-100: $1/month`;
+                }
+                text.classList.remove('loading-pulse');
+            } catch (e) {
+                document.getElementById('statsText').textContent = 'First 20 users free • 21-100: $1/month';
+                document.getElementById('statsText').classList.remove('loading-pulse');
+            }
+        }
+
+        async function shareApp() {
+            const shareData = {
+                title: 'AudioTube',
+                text: 'Listen to YouTube as audio only - perfect for music and podcasts!',
+                url: window.location.origin
+            };
+
+            if (navigator.share) {
+                try {
+                    await navigator.share(shareData);
+                } catch (e) {
+                    copyToClipboard();
+                }
+            } else {
+                copyToClipboard();
+            }
+        }
+
+        function copyToClipboard() {
+            navigator.clipboard.writeText(window.location.origin).then(() => {
+                alert('Link copied to clipboard!');
+            }).catch(() => {
+                prompt('Copy this link:', window.location.origin);
+            });
+        }
 
         function initTheme() {
             if (!isDark) {

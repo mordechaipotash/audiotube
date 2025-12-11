@@ -11,7 +11,8 @@ from database import (
     init_db, get_or_create_user, get_user_by_id,
     create_auth_token, verify_auth_token, cleanup_expired_tokens,
     add_to_history, get_user_history,
-    get_cached_stream, cache_stream, cleanup_old_cache
+    get_cached_stream, cache_stream, cleanup_old_cache,
+    get_user_count
 )
 from auth import (
     generate_magic_token, send_magic_link,
@@ -38,6 +39,24 @@ def index():
 @app.route('/health')
 def health():
     return jsonify({'status': 'ok'})
+
+@app.route('/api/stats')
+def get_stats():
+    """Get user count and pricing info"""
+    try:
+        count = get_user_count() if os.environ.get('DATABASE_URL') else 0
+    except:
+        count = 0
+
+    return jsonify({
+        'user_count': count,
+        'free_slots': max(0, 20 - count),
+        'pricing': {
+            'free_tier': 20,
+            'paid_tier': 100,
+            'price': '$1/month'
+        }
+    })
 
 # ============== Auth Routes ==============
 
